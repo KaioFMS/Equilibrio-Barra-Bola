@@ -1,6 +1,6 @@
 # Equilibrio-Barra-Bola
 
-Projeto da disciplina de Introdução a Programação do Centro de Informática (CIN) da Universidade Federal de Pernambuco (UFPE).
+Esse repósitório foi feito para armazenar e facilitar o acesso aos arquivos de código que serão usados no projeto da disciplina de Introdução a Computação do Centro de Informática (CIN) da Universidade Federal de Pernambuco (UFPE).
 
 **Objetivo**
   O objetivo desse projeto é colocar em prática os conhecimentos de eletrônica e programação, assim como conhecimentos de física e matemática, aplicados a um projeto.  Nosso projeto em especifico visa aplicar esses conceitos a um sistema conhecido como Ball Balancing System, em português um sistema que equilibra uma esfera em uma superfície móvel.
