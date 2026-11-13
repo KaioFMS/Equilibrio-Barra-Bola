@@ -1,0 +1,32 @@
+
+// Esse código é só pra mostrar a utilidade da biblioteca do PID no arduino
+// Nessa biblioteca, você põem os valores pra kd, kp, ki, setpoint e input
+// Depois disso, a própria biblioteca te dá as funções prontas que calculam todo o PID
+// A biblioteca faz todo o resto, você chama um PID, habilita pra ele começar a calcular e chama uma função que vai dar início aos cálculos
+
+
+#include <PID_v1.h>
+#include <Servo.h>
+
+double Setpoint, Input, Output; // ---> Declarando as variáveis de setpoint, entrada e saída
+double Kp = 2.5, Ki = 0.1, Kd = 1.2; // Kd alto é essencial aqui
+
+PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT); // ---> Cria um PID e adiciona as variáveis para os cálculos futuros
+Servo meuServo; // ---> Declaração de um servo
+
+void setup() {
+  meuServo.attach(9); // ---> Pino do servo
+  Setpoint = 15.0; // Meio da viga (15 cm), onde a bola vai ficar
+  
+  myPID.SetMode(AUTOMATIC); // ---> Vai habilitar ou desabilitar o PID pra fazer os cálculos automaticamente 
+  myPID.SetOutputLimits(-40, 40); // Inclinação máxima de -40° a +40°
+  myPID.SetSampleTime(25);        // Calcula a cada 25ms (40 vezes por segundo)
+}
+
+void loop() {
+  Input = lerDistanciaDaBola(); // Sua função do sensor (ultrassônico ou IR)
+  myPID.Compute(); // ---> Função que inicia os cálculos do PID
+  
+  // 90° é a viga totalmente reta (nível zero)
+  meuServo.write(90 + Output); 
+}
