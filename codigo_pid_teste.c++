@@ -73,7 +73,7 @@ void loop() {
       tempo_anterior = tempo_atual;
 
       // 9. APLICAÇÃO AO MOTOR (Soma o PID ao centro físico de 90 graus)
-      float angulo_servo = 90 + PID_Total;
+      float angulo_servo = 90 - PID_Total;
 
       // 10. ZONAS DE SATURAÇÃO (Travões físicos)
       // Substitua 135 e 45 pelos limites mecânicos reais da sua peça 3D
