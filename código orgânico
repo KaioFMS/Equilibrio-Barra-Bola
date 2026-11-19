@@ -1,25 +1,25 @@
 #include <Servo.h>
 #include <PID_v1.h>
 
-//A definir: angulo equilibrante, Direct ou reverse, limites do angulo ajuste e as constantes
+//A definir: angulo equilibrante = 90, reverse, limites do angulo ajuste e as constantes
 
 //pinos do sensor
-const int echo = 8;
-const int trig = 9;
+const int echo = 9;
+const int trig = 8;
 
 Servo meuservo;
 
-const int angulo_equilibrante = 45;
+const int angulo_equilibrante = 90;
 
 //parâmetros do PID
 double distancia = 0.0, angulo_ajuste = 0.0, setpoint = 20.0;
-double kp = 1.0, ki = 0.0, kd = 0.0;
+double kp = 0.7, ki = 0.0, kd = 1.0;
 
 //váriavel para conferir se o sensor está lendo a bolinha
 float resposta = 0.0;
 
 //          input    ,  output       ,  setpoint              REVERSE???
-PID meuPID(&distancia, &angulo_ajuste, &setpoint, kp, ki, kd, DIRECT);
+PID meuPID(&distancia, &angulo_ajuste, &setpoint, kp, ki, kd, REVERSE);
 
 void setup(){
 	Serial.begin(9600);
@@ -37,7 +37,7 @@ void setup(){
   	//funções do PID
   	meuPID.SetMode(AUTOMATIC);
   	meuPID.SetSampleTime(50);
-  	meuPID.SetOutputLimits(-20, 20);
+  	meuPID.SetOutputLimits(-45, 45);
 }
 
 float calculaDist(){
@@ -68,8 +68,8 @@ void loop(){
   	Serial.print(" ");
   	Serial.print(distancia);
   	Serial.print(" ");
-	Serial.print(angulo_ajuste);
+	Serial.print(angulo_equilibrante + angulo_ajuste);
   	Serial.println(" ");
   
-  	delay(50);
+  	delay(150);
 }
