@@ -1,0 +1,121 @@
+#include <Servo.h>
+
+// Pinos
+const int trigPin = 9;
+const int echoPin = 10;
+const int servoPin = 6;
+
+// Dimensões da barra (em cm)
+const float SETPOINT = 20.0;      // Ponto de equilíbrio no meio da barra
+const float DIST_MIN = 3.5;       // Zona morta mínima do HC-SR04
+const float DIST_MAX = 40.0;      // Comprimento máximo da barra
+
+// Ganhos PID ajustados para o MG90S e bola de frescobol
+float Kp = 2.4;   // Resposta proporcional mais suave para compensar a rapidez do MG90S
+float Ki = 0.04;  // Corrige desnível mecânico ou atrito da barra
+float Kd = 1.9;   // Freio mais forte, essencial para bola leve de borracha
+
+// Calibração do MG90S
+const int ANGULO_NIVEL = 90;      // Ajuste este valor até a barra ficar perfeitamente reta
+const int ANGULO_MIN = 50;        // Proteção mecânica inferior
+const int ANGULO_MAX = 130;       // Proteção mecânica superior
+
+// Variáveis de controle
+float erro = 0, erroAnterior = 0;
+float integral = 0, derivativo = 0;
+float distanciaFiltrada = SETPOINT;
+float distanciaAnterior = SETPOINT;
+unsigned long tempoAnterior = 0;
+const int INTERVALO_MS = 25;      // Ciclo de 40 Hz (ideal para o MG90S)
+
+Servo servoMG90S;
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+
+  // Define pulsos padrão do MG90S (500us a 2400us)
+  servoMG90S.attach(servoPin, 500, 2400);
+  servoMG90S.write(ANGULO_NIVEL);
+  
+  delay(1500); // Tempo para posicionar a bola na barra
+  tempoAnterior = millis();
+}
+
+void loop() {
+  unsigned long tempoAtual = millis();
+  
+  if (tempoAtual - tempoAnterior >= INTERVALO_MS) {
+    float dt = (tempoAtual - tempoAnterior) / 1000.0;
+    tempoAnterior = tempoAtual;
+
+    // 1. Leitura com filtro de mediana (remove ruídos do HC-SR04)
+    float leitura = lerDistanciaMediana();
+    
+    if (leitura >= DIST_MIN && leitura <= DIST_MAX) {
+      // Filtro passa-baixa para suavizar a curva
+      distanciaFiltrada = (0.65 * distanciaFiltrada) + (0.35 * leitura);
+    }
+
+    // 2. Cálculo do Erro
+    erro = SETPOINT - distanciaFiltrada;
+
+    // 3. Termo Integral (atua apenas perto do centro para evitar oscilação)
+    if (abs(erro) < 8.0) {
+      integral += erro * dt;
+      integral = constrain(integral, -40.0, 40.0);
+    } else {
+      integral = 0;
+    }
+
+    // 4. Termo Derivativo calculado sobre a posição (evita trancos no MG90S)
+    float velocidadeBola = (distanciaFiltrada - distanciaAnterior) / dt;
+    derivativo = -velocidadeBola;
+    distanciaAnterior = distanciaFiltrada;
+
+    // 5. Saída PID
+    float saidaPID = (Kp * erro) + (Ki * integral) + (Kd * derivativo);
+
+    // 6. Envio para o MG90S
+    // Se a barra inclinar para o lado errado, troque o '+' por '-'
+    int anguloAlvo = ANGULO_NIVEL + (int)saidaPID;
+    anguloAlvo = constrain(anguloAlvo, ANGULO_MIN, ANGULO_MAX);
+
+    servoMG90S.write(anguloAlvo);
+
+    // Dados para o Serial Plotter da IDE Arduino
+    Serial.print("Alvo:");
+    Serial.print(SETPOINT);
+    Serial.print(",Distancia:");
+    Serial.print(distanciaFiltrada);
+    Serial.print(",Angulo:");
+    Serial.println(anguloAlvo);
+  }
+}
+
+float lerUnicaDistancia() {
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  long duracao = pulseIn(echoPin, HIGH, 3000); // Timeout equivalente a ~50cm
+  if (duracao == 0) return distanciaFiltrada;
+  
+  return (duracao * 0.0343) / 2.0;
+}
+
+float lerDistanciaMediana() {
+  float a = lerUnicaDistancia();
+  delayMicroseconds(500);
+  float b = lerUnicaDistancia();
+  delayMicroseconds(500);
+  float c = lerUnicaDistancia();
+
+  // Retorna o valor do meio entre as 3 leituras
+  if ((a <= b && b <= c) || (c <= b && b <= a)) return b;
+  if ((b <= a && a <= c) || (c <= a && a <= b)) return a;
+  return c;
+}
