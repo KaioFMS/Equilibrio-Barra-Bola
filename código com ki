@@ -1,0 +1,99 @@
+#include <Servo.h>
+#include <PID_v1.h>
+
+//A definir: angulo equilibrante = 90, reverse, limites do angulo ajuste e as constantes
+
+//pinos do sensor
+const int echo = 9;
+const int trig = 8;
+
+Servo meuservo;
+
+const int angulo_equilibrante = 90;
+
+//parâmetros do PID
+double distancia = 0.0, angulo_ajuste = 0.0, setpoint = 20.0;
+double kp = 1.6, ki = 0.01, kd = 0.2;
+
+//váriavel para conferir se o sensor está lendo a bolinha
+float resposta = 0.0;
+int iniciar = 0;
+int leituras_descartadas = 0;
+
+//          input    ,  output       ,  setpoint              REVERSE???
+PID meuPID(&distancia, &angulo_ajuste, &setpoint, kp, ki, kd, REVERSE);
+
+void setup() {
+  Serial.begin(9600);
+
+  //sensor
+  pinMode(trig, OUTPUT);
+  pinMode(echo, INPUT);
+
+  //servo
+  meuservo.attach(10);
+
+  //ângulo inicial do servo
+  meuservo.write(angulo_equilibrante);
+
+  //funções do PID
+  meuPID.SetMode(AUTOMATIC);
+  meuPID.SetSampleTime(50);
+  meuPID.SetOutputLimits(-30, 30);
+}
+
+float calculaDist() {
+  digitalWrite(trig, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trig, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trig, LOW);
+
+  long duracao = pulseIn(echo, HIGH, 30000);
+  if (duracao == 0) {
+    return -1.0;
+  }
+
+  return duracao * 0.0343 / 2;
+}
+
+void loop() {
+  resposta = (calculaDist());
+  if (resposta > 0 && resposta < 35) {  // só computa as leituras se identificar a bolinha
+    if (iniciar == 0) {
+      distancia = resposta;
+      iniciar = 1;
+    } else {
+      float turbulencia = resposta - distancia;
+      if (fabs(turbulencia) < 15 || leituras_descartadas > 3) {
+        distancia = resposta;
+        leituras_descartadas = 0;
+      } else {
+        leituras_descartadas++;
+      }
+    }
+    float proximidade = fabs(setpoint - distancia);
+    if (proximidade > 1 && proximidade < 5) {
+      meuPID.SetTunings(kp, ki, kd);
+    } else {
+      meuPID.SetTunings(kp, 0.0, kd);  // Desliga longe demais ou quando já cravou no centro
+    }
+    meuPID.Compute();
+  }  //                                + (P + I + D)
+  else {
+    iniciar = 0;
+  }
+
+
+  meuservo.write(angulo_equilibrante + angulo_ajuste);
+
+  // plotar o gráfico
+  Serial.print(setpoint);
+  Serial.print(" ");
+  Serial.print(distancia);
+  Serial.print(" ");
+  Serial.print(angulo_equilibrante + angulo_ajuste);
+  Serial.println(" ");
+
+  delay(130);
+}
