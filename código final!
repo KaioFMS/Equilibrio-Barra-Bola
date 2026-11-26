@@ -12,8 +12,8 @@ Servo meuservo;
 const int angulo_equilibrante = 90;
 
 //parâmetros do PID
-double distancia = 0.0, angulo_ajuste = 0.0, setpoint = 20.0;
-double kp = 1.6, ki = 0.01, kd = 0.2;
+double distancia = 0.0, angulo_ajuste = 0.0, setpoint = 17.0;
+double kp = 0.5, ki = 0.0, kd = 0.2;
 
 //váriavel para conferir se o sensor está lendo a bolinha
 float resposta = 0.0;
@@ -39,7 +39,7 @@ void setup() {
   //funções do PID
   meuPID.SetMode(AUTOMATIC);
   meuPID.SetSampleTime(50);
-  meuPID.SetOutputLimits(-30, 30);
+  meuPID.SetOutputLimits(-25, 25);
 }
 
 float calculaDist() {
@@ -65,7 +65,7 @@ void loop() {
       iniciar = 1;
     } else {
       float turbulencia = resposta - distancia;
-      if (fabs(turbulencia) < 15 || leituras_descartadas > 3) {
+      if (fabs(turbulencia) < 10 || leituras_descartadas > 3) {
         distancia = resposta;
         leituras_descartadas = 0;
       } else {
